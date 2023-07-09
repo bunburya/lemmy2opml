@@ -1,0 +1,42 @@
+<opml version="2.0">
+  <head>
+    <title>Example OPML file</title>
+    <dateCreated>Sun, 09 Jul 2023 22:04:37 -0000</dateCreated>
+  </head>
+  <body>
+    <outline text="lemmy.world" type="category">
+      <outline text="!android@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/android.xml" htmlUrl="https://lemmy.world/c/android" title="Android (locked, see pinned thread)" />
+      <outline text="!cooking@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/cooking.xml" htmlUrl="https://lemmy.world/c/cooking" title="Cooking " />
+      <outline text="!europa@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/europa.xml" htmlUrl="https://lemmy.world/c/europa" title="Europa / Europe and the EU + EEA" />
+      <outline text="!fediverse@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/fediverse.xml" htmlUrl="https://lemmy.world/c/fediverse" title="Fediverse" />
+      <outline text="!newcommunities@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/newcommunities.xml" htmlUrl="https://lemmy.world/c/newcommunities" title="New Communities" />
+      <outline text="!nostupidquestions@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/nostupidquestions.xml" htmlUrl="https://lemmy.world/c/nostupidquestions" title="No Stupid Questions" />
+      <outline text="!plaintextaccounting@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/plaintextaccounting.xml" htmlUrl="https://lemmy.world/c/plaintextaccounting" title="Plain Text Accounting" />
+      <outline text="!selfhosted@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/selfhosted.xml" htmlUrl="https://lemmy.world/c/selfhosted" title="Selfhosted" />
+      <outline text="!world@lemmy.world" type="rss" xmlUrl="https://lemmy.world/feeds/c/world.xml" htmlUrl="https://lemmy.world/c/world" title="World News &amp; Analysis" />
+    </outline>
+    <outline text="lemmy.ml" type="category">
+      <outline text="!archlinux@lemmy.ml" type="rss" xmlUrl="https://lemmy.ml/feeds/c/archlinux.xml" htmlUrl="https://lemmy.ml/c/archlinux" title="Arch Linux" />
+      <outline text="!books@lemmy.ml" type="rss" xmlUrl="https://lemmy.ml/feeds/c/books.xml" htmlUrl="https://lemmy.ml/c/books" title="Books" />
+      <outline text="!coffee@lemmy.ml" type="rss" xmlUrl="https://lemmy.ml/feeds/c/coffee.xml" htmlUrl="https://lemmy.ml/c/coffee" title="Coffee" />
+      <outline text="!linux@lemmy.ml" type="rss" xmlUrl="https://lemmy.ml/feeds/c/linux.xml" htmlUrl="https://lemmy.ml/c/linux" title="Linux" />
+      <outline text="!asklemmy@lemmy.ml" type="rss" xmlUrl="https://lemmy.ml/feeds/c/asklemmy.xml" htmlUrl="https://lemmy.ml/c/asklemmy" title="asklemmy" />
+    </outline>
+    <outline text="social.fossware.space" type="category">
+      <outline text="!fossdroid@social.fossware.space" type="rss" xmlUrl="https://social.fossware.space/feeds/c/fossdroid.xml" htmlUrl="https://social.fossware.space/c/fossdroid" title="FOSS for Android" />
+    </outline>
+    <outline text="beehaw.org" type="category">
+      <outline text="!food@beehaw.org" type="rss" xmlUrl="https://beehaw.org/feeds/c/food.xml" htmlUrl="https://beehaw.org/c/food" title="Food and Cooking" />
+      <outline text="!technology@beehaw.org" type="rss" xmlUrl="https://beehaw.org/feeds/c/technology.xml" htmlUrl="https://beehaw.org/c/technology" title="Technology" />
+    </outline>
+    <outline text="feddit.uk" type="category">
+      <outline text="!london@feddit.uk" type="rss" xmlUrl="https://feddit.uk/feeds/c/london.xml" htmlUrl="https://feddit.uk/c/london" title="London" />
+    </outline>
+    <outline text="lemmy.one" type="category">
+      <outline text="!privacyguides@lemmy.one" type="rss" xmlUrl="https://lemmy.one/feeds/c/privacyguides.xml" htmlUrl="https://lemmy.one/c/privacyguides" title="Privacy Guides" />
+    </outline>
+    <outline text="programming.dev" type="category">
+      <outline text="!python@programming.dev" type="rss" xmlUrl="https://programming.dev/feeds/c/python.xml" htmlUrl="https://programming.dev/c/python" title="Python" />
+    </outline>
+  </body>
+</opml>
