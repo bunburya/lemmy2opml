@@ -342,7 +342,15 @@ class LemmyClient:
         try:
             r = requests.request("GET", url=f"{self.base_api_url}/site", params=payload)
             r.raise_for_status()
-            return [LemmyCommunity.from_dict(c["community"]) for c in r.json()["my_user"]["follows"]]
+            follows = r.json()["my_user"]["follows"]
+            communities = []
+            for c in follows:
+                community = c["community"]
+                try:
+                    communities.append(LemmyCommunity.from_dict(community))
+                except Exception as e:
+                    logging.error(f"Skipping community due to error: {community['actor_id']}: {e}")
+            return communities
 
         except Exception as e:
             logger.error(f"Could not fetch subscribed communities for user {self.username} on site {self.site_url}:"
