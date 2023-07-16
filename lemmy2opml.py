@@ -6,7 +6,7 @@ from datetime import datetime
 from email.utils import format_datetime
 from getpass import getpass
 from dataclasses import dataclass
-from enum import StrEnum
+from enum import StrEnum, auto
 from os.path import splitext
 from time import sleep
 from typing import Optional, Any, Union, Generator
@@ -55,17 +55,29 @@ def prettify_xml(xml: str, space: str = "  ") -> str:
     return ElementTree.tostring(elem, encoding="unicode")
 
 
-class SortBy(StrEnum):
-    """Valid values for the `sort` query parameter in a Lemmy feed URL. Member values are the correctly cased values
-    to be used in URLs.
-    """
-    hot = "Hot"
-    active = "Active"
-    new = "New"
-    old = "Old"
-    mostcomments = "MostComments"
-    newcomments = "NewComments"
+@dataclass(slots=True)
+class SortBy:
+    """A simple data class containing the string values that are used when telling Lemmy or Kbin how to sort posts.
 
+    :param lemmy: The string to be used in a Lemmy URL. If None, that means the relevant sorting method is not supported
+        by Lemmy.
+    :param kbin: The string to be used in a Kbin URL.If None, that means the relevant sorting method is not supported
+        by Kbin.
+    """
+    lemmy: Optional[str] = None
+    kbin: Optional[str] = None
+
+UNSUPPORTED_SORT_BY = SortBy(None, None)
+
+SORT_BY_VALUES = {
+    "top": SortBy("TopAll", "top"),
+    "hot": SortBy("Hot", "hot"),
+    "active": SortBy("Active", "active"),
+    "new": SortBy("New", "newest"),
+    "old": SortBy("Old", None),
+    "mostcomments": SortBy("MostComments", "commented"),
+    "newcomments": SortBy("NewComments", None)
+}
 
 @dataclass(slots=True)
 class LemmyCommunity:
@@ -76,12 +88,14 @@ class LemmyCommunity:
     :param id: The unique ID of the community.
     :param title: The human-readable title of the community.
     :param description: An optional description of the community.
+    :param is_kbin: Whether the communities is actually a Kbin magazine.
     """
     instance: str
     name: str
     id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
+    is_kbin: bool = False
 
     @staticmethod
     def from_url(
@@ -93,14 +107,19 @@ class LemmyCommunity:
         """Parse a Lemmy community URL to a :class:`LemmyCommunity` object."""
         parsed = urlsplit(url)
         path_tokens = parsed.path.split('/')[1:]
-        if path_tokens[0] != "c":
+        if path_tokens[0] == "c":
+            is_kbin = False
+        elif path_tokens[0] == "m":
+            is_kbin = True
+        else:
             raise ValueError(f"URL does not appear to be a Lemmy community URL: {url}")
         return LemmyCommunity(
             instance=parsed.netloc,
             name=path_tokens[1],
             id=id,
             title=title,
-            description=description
+            description=description,
+            is_kbin=is_kbin
         )
 
     @staticmethod
@@ -125,10 +144,11 @@ class LemmyCommunity:
         )
 
     @staticmethod
-    def from_text(text: str) -> "LemmyCommunity":
+    def from_text(text: str, is_kbin: bool = False) -> "LemmyCommunity":
         """Parse a textual representation of a Lemmy community to a :class:`LemmyCommunity` object.
 
         :param text: Text in the form `!<community>@<instance>`.
+        :param is_kbin: Whether the community is actually a Kbin magazine.
         """
         if text[0] != "!":
             raise ValueError(f"Invalid format: {text}")
@@ -138,7 +158,8 @@ class LemmyCommunity:
             raise ValueError(f"Invalid format: {text}")
         return LemmyCommunity(
             instance,
-            community
+            community,
+            is_kbin=is_kbin
         )
 
     @staticmethod
@@ -161,10 +182,6 @@ class LemmyCommunity:
         if outline.type not in {"rss", "lemmyCommunity"}:
             logger.warning(f"Expected outline of type `rss` or `lemmyCommunity`, not `{outline.type}`. "
                            f"Trying to parse anyway.")
-        try:
-            return LemmyCommunity.from_text(outline.text)
-        except ValueError:
-            logger.warning(f"Could not infer Lemmy community from outline text attribute `{outline.text}`")
 
         try:
             return LemmyCommunity.from_url(outline.html_url)
@@ -200,20 +217,76 @@ class LemmyCommunity:
                 failed += 1
         return communities, failed
 
-    def url(self, feed: bool = False, sort_by: Optional[SortBy] = None) -> str:
-        """Generate the URL for the RSS feed of the community.
+    def _resolve_sort_by(self, sort_by_str: Optional[str] = None) -> Optional[str]:
+        """Convert one of the "normalised" options for sorting posts to a string that can be used in generating URLs."""
+        if sort_by_str is None:
+            return None
+        try:
+            ambiguous_sort_by = SORT_BY_VALUES[sort_by_str]
+        except KeyError:
+            raise ValueError(f"Value '{sort_by_str}' not in {set(SORT_BY_VALUES.keys())}")
+        if self.is_kbin:
+            actual_sort_by = ambiguous_sort_by.kbin
+        else:
+            actual_sort_by = ambiguous_sort_by.lemmy
+        if actual_sort_by is None:
+            raise ValueError(f"Sorting by '{sort_by_str}' not supported for {'Kbin' if self.is_kbin else 'Lemmy'} "
+                             f"communities.")
+        return actual_sort_by
+    def html_url(self, sort_by: Optional[str] = None):
+        """Generate the HTML URL for the community. This should also be the `actor_id` that is used to identify the
+        community in the Lemmy API.
 
-        :param feed: Whether to return the URL to the RSS feed for the community, or the "normal" URL.
-        :param sort_by: How items should be sorted in the RSS feed.
+        :param sort_by: How posts should be sorted.
         """
-        if feed:
-            path = f"/feeds/c/{self.name}.xml"
+        try:
+            sort_by = self._resolve_sort_by(sort_by)
+        except ValueError:
+            logging.warning(f"Sorting by \'{sort_by}\' not supported for community '{self.name}' at instance "
+                            f"'{self.instance}'. Ignoring sort_by argument.")
+            sort_by = None
+
+        q = ""
+        if self.is_kbin:
+            path = f"/m/{self.name}"
+            if sort_by is not None:
+                path += f"/{sort_by}"
         else:
             path = f"/c/{self.name}"
+            if sort_by is not None:
+                q = urlencode({"sort": sort_by})
+        return urlunsplit((
+            "https",
+            self.instance,
+            path,
+            q,
+            ""
+        ))
+
+    def rss_url(self, sort_by: Optional[str] = None):
+        """Generate the RSS feed URL for the community.
+
+        :param sort_by: How items should be sorted in the RSS feed.
+        """
         if sort_by is not None:
-            q = urlencode({"sort": sort_by.value})
+            if self.is_kbin:
+                logging.warning(f"Sorting in RSS feed URLs not supported for Kbin communities. "
+                                f"Ignoring sort_by argument.")
+            else:
+                try:
+                    sort_by = self._resolve_sort_by(sort_by)
+                except ValueError:
+                    logging.warning(f"Sorting by \'{sort_by}\' not supported for community '{self.name}' at instance "
+                                    f"'{self.instance}'. Ignoring sort_by argument.")
+                    sort_by = None
+        q = ""
+        if self.is_kbin:
+            path = f"/rss"
+            q = urlencode({"magazine": self.name})
         else:
-            q = ""
+            path = f"/feeds/c/{self.name}.xml"
+            if sort_by is not None:
+                q = urlencode({"sort": sort_by})
         return urlunsplit((
             "https",
             self.instance,
@@ -227,14 +300,14 @@ class LemmyCommunity:
         """Textual representation of the community, in the form `!<community>@<instance>`."""
         return f"!{self.name}@{self.instance}"
 
-    def to_outline(self, sort_by: Optional[SortBy] = None, include_description: bool = False) -> Outline:
+    def to_outline(self, sort_by: Optional[str] = None, include_description: bool = False) -> Outline:
         return Outline(
             type="rss",
             text=self.text,
             title=self.title,
             description=self.description if include_description else None,
-            xml_url=self.url(feed=True, sort_by=sort_by),
-            html_url=self.url(sort_by=sort_by)
+            xml_url=self.rss_url(sort_by=sort_by),
+            html_url=self.html_url(sort_by=sort_by)
         )
 
 
@@ -293,7 +366,7 @@ class LemmyClient:
             raise NotLoggedInError("No auth token found; you need to log in first.")
 
         if isinstance(community, LemmyCommunity):
-            url = community.url()
+            url = community.html_url()
         else:
             url = community
 
@@ -326,7 +399,7 @@ class LemmyClient:
             r = requests.request("POST", url=f"{self.base_api_url}/community/follow", json=payload)
             r.raise_for_status()
         except Exception as e:
-            logger.error(f"Could not subscribe to community at {community.url}: {e}")
+            logger.error(f"Could not subscribe to community at {community.html_url()}: {e}")
             raise e
 
     @property
@@ -360,7 +433,7 @@ class LemmyClient:
     def subscribed_to_opml(
             self,
             categories: bool = False,
-            sort_by: Optional[SortBy] = None,
+            sort_by: Optional[str] = None,
             title: Optional[str] = None,
             include_owner_name: bool = False,
             include_owner_id: bool = False,
@@ -436,7 +509,7 @@ def export_communities(ns: Namespace):
 
     opml, exported = client.subscribed_to_opml(
         ns.categories,
-        SortBy[ns.sort_by] if ns.sort_by else None,
+        ns.sort_by,
         ns.title,
         ns.include_user_name,
         ns.include_user_url,
@@ -499,7 +572,7 @@ def get_parser() -> ArgumentParser:
     ex_parser.add_argument("username", help="The username used to log in.")
 
     ex_parser.add_argument("outfile", metavar="PATH", help="Where to save the file.")
-    ex_parser.add_argument("-s", "--sort-by", choices=[e.name for e in SortBy],
+    ex_parser.add_argument("-s", "--sort-by", choices=SORT_BY_VALUES.keys(),
                            help="How to sort posts when viewing communities (used to construct URLs).")
     ex_parser.add_argument("-t", "--title", help="Title to include in the OPML file.")
     ex_parser.add_argument("-c", "--categories", action="store_true", help="Categorise communities by instance.")
