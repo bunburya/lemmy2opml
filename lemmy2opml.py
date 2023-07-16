@@ -6,7 +6,6 @@ from datetime import datetime
 from email.utils import format_datetime
 from getpass import getpass
 from dataclasses import dataclass
-from enum import StrEnum, auto
 from os.path import splitext
 from time import sleep
 from typing import Optional, Any, Union, Generator
@@ -18,7 +17,8 @@ import requests
 from opyml import Outline, OPML, Head, Body
 
 
-class NotLoggedInError(Exception): pass
+class NotLoggedInError(Exception):
+    pass
 
 
 logger = logging.getLogger(__name__)
@@ -67,6 +67,7 @@ class SortBy:
     lemmy: Optional[str] = None
     kbin: Optional[str] = None
 
+
 UNSUPPORTED_SORT_BY = SortBy(None, None)
 
 SORT_BY_VALUES = {
@@ -78,6 +79,7 @@ SORT_BY_VALUES = {
     "mostcomments": SortBy("MostComments", "commented"),
     "newcomments": SortBy("NewComments", None)
 }
+
 
 @dataclass(slots=True)
 class LemmyCommunity:
@@ -233,6 +235,7 @@ class LemmyCommunity:
             raise ValueError(f"Sorting by '{sort_by_str}' not supported for {'Kbin' if self.is_kbin else 'Lemmy'} "
                              f"communities.")
         return actual_sort_by
+
     def html_url(self, sort_by: Optional[str] = None):
         """Generate the HTML URL for the community. This should also be the `actor_id` that is used to identify the
         community in the Lemmy API.
